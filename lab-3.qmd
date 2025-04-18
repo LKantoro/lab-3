@@ -264,9 +264,11 @@ rounded_mean_city_mileage <- mpg |>
 
 # Page 1
 
-## Column - Plots
+## Rows - Plots
 
-### Row - Medals by sport {height="60%"}
+### Column - Medals by sport {height="60%"}
+
+### Vaccines {.tabset}
 
 ```{r}
 graph1_tibble_vaccine %>% ggplot(aes(x = value, fill = map_region, 
@@ -275,7 +277,7 @@ graph1_tibble_vaccine %>% ggplot(aes(x = value, fill = map_region,
   facet_grid(rows = vars(map_region), axis.labels = "margins") +
   labs(x = "", y = "", fill = "",
        title = "Strong Belief Vaccines Are Effective By Country and Region") +
-  scale_x_continuous(labels = scales::percent) +
+  scale_x_continuous(labels = scales::percent) + xlim(0, 1) +
   geom_text(aes(x = .5, y = .8, label = map_region)) +
   theme_light() + 
   theme(strip.text = element_blank(), legend.position = "none", 
@@ -283,6 +285,10 @@ graph1_tibble_vaccine %>% ggplot(aes(x = value, fill = map_region,
         plot.title.position = "plot", axis.text.y = element_blank(), 
         axis.ticks.y = element_blank())
 ```
+
+
+
+
 
 ```{r}
 graph1_tibble_science %>% ggplot(aes(x = science_value, fill = map_region, 
@@ -291,7 +297,7 @@ graph1_tibble_science %>% ggplot(aes(x = science_value, fill = map_region,
   facet_grid(rows = vars(map_region), axis.labels = "margins") +
   labs(x = "", y = "", fill = "",
        title = "Strong Understanding of Science") +
-  scale_x_continuous(labels = scales::percent) +
+  scale_x_continuous(labels = scales::percent) + xlim(0, 1) +
   geom_text(aes(x = .5, y = .8, label = map_region)) +
   theme_light() + 
   theme(strip.text = element_blank(), legend.position = "none", 
@@ -301,7 +307,10 @@ graph1_tibble_science %>% ggplot(aes(x = science_value, fill = map_region,
 ```
 
 
-### Row - Medals by year{height="40%"}
+
+
+
+### Column - Medals by year{height="40%"}
 
 ```{r}
 #| title: Medals by year
@@ -348,12 +357,15 @@ list(
 )
 ```
 
-# Page 2
+# Page 2 {orientation="rows" scrolling="false"}
 
-## Column - Medals by country
+
+## Rows - Plots
+
+### Column - Medals by sport {height="60%"}
 
 ```{r}
-leaflet(graph2_df2, width = '60%') %>% addTiles() %>% 
+leaflet(graph2_df2) %>% addTiles() %>% 
   addPolygons(fillColor = ~pal(trust_value), weight = .2,  opacity = 1, 
               color = 'black', popup = ~country_name, label = ~trust_value, 
               stroke = FALSE) %>%
@@ -363,3 +375,45 @@ leaflet(graph2_df2, width = '60%') %>% addTiles() %>%
              position = "topleft") %>%
   setView(lng = 0, lat = 0, zoom = 1.5) 
 ```
+
+### Column - Medals by year{height="40%"}
+
+```{r}
+#| content: valuebox
+#| title: "Most efficient"
+list(
+  icon = "fuel-pump",
+  color = "success",
+  value = paste(highest_mileage_cty, "mpg")
+)
+```
+
+
+
+```{r}
+#| title: Medals by year
+olympics |>
+  count(year, medal) |>
+  ggplot(aes(x = year, y = n, color = medal)) +
+  geom_point(size = 0.5) +
+  geom_line() +
+  guides(color = guide_legend(reverse = TRUE)) +
+  scale_x_continuous(breaks = seq(1896, 2020, 8)) +
+  labs(
+    x = "Year",
+    y = NULL,
+    color = "Medal"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.9, 0.2),
+    legend.direction = "horizontal",
+    legend.background = element_rect(fill = "white", color = "gray")
+  )
+```
+
+
+## Sidebar {.sidebar}
+
+hgdsfjkgxkghx
