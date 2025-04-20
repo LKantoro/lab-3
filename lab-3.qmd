@@ -247,52 +247,6 @@ percent_effective_and_safe = percent_effective_and_safe %>%
 
 
 
-
-
-
-```{r}
-#| label: load-data
-#| message: false
-olympics_full <- read_csv("data/olympics.csv")
-```
-
-```{r}
-#| label: prep-data
-olympics <- olympics_full |>
-  filter(
-    season == "Summer",
-    !is.na(medal)
-  ) |>
-  separate_wider_delim(
-    cols = team, 
-    names = c("team", "suffix"), 
-    delim = "-", 
-    too_many = "merge", 
-    too_few = "align_start"
-  ) |>
-  select(-suffix) |>
-  mutate(medal = fct_relevel(medal, "Bronze", "Silver", "Gold"))
-```
-
-
-```{r}
-#| label: calculate-values
-lowest_mileage_cty <- mpg |>
-  filter(cty == min(cty)) |>
-  distinct(cty) |>
-  pull(cty)
-
-highest_mileage_cty <- mpg |>
-  filter(cty == max(cty)) |>
-  distinct(cty) |>
-  pull(cty)
-  
-rounded_mean_city_mileage <- mpg |>
-  summarize(round(mean(cty), 2)) |>
-  pull()
-```
-
-
 # Science vs. Vaccines
 
 ## Column - Plots {width="60%"}
@@ -495,69 +449,70 @@ leaflet(graph2_df2) %>% addTiles() %>%
 
 #Q11C, trust in scientists
 
-
-wgm2018_full_new2 %>% filter(D1 == '1') %>%
-  count(Q11C) 
-
-wgm2018_full_new2 %>% filter(D1 == '2') %>%
-  count(Q11C)
-
-#%>% mutate(prop = prop.table(n))
+#percent of religious people who trust scientists
+religious_trust_science = wgm2018_full_new2 %>% filter(D1 == '1') %>%
+  count(Q12) %>% mutate(prop = prop.table(n)) %>%
+  filter(Q12 == '1') %>% select(prop)
 
 
-
-wgm2018_full_new2 %>% 
-  count(Q9) %>% mutate(prop = prop.table(n)) %>% 
-  filter(Q9 == '1') %>% 
-  select(prop)
-```
-
-
-```{r}
-#| content: valuebox
-#| title: "Want To Learn More About Science"
-list(
-  icon = "lightbulb-fill",
-  color = "success",
-  value = paste(round(want_to_know_more_science*100,1), "%")
-)
+#percent of non-religious people who trust scientists
+non_religious_trust_science = wgm2018_full_new2 %>% filter(D1 == '2') %>%
+  count(Q12) %>% mutate(prop = prop.table(n)) %>%
+  filter(Q12 == '1') %>% select(prop)
 
 ```
 
 
-```{r}
-#| content: valuebox
-#| title: "Want To Learn More About Disease"
-list(
-  icon = "virus",
-  color = "info",
-  value = paste(round(want_to_know_more_disease*100,1), "%")
-)
+::: {.valuebox icon="yin-yang" color="#FF0000"}
 
-```
+`{r} paste(round(religious_trust_science*100,1), "%")`
+
+of Religious People Have High Trust in Science
+
+:::
+
+
+::: {.valuebox icon="slash-circle" color="#000000"}
+
+`{r} paste(round(non_religious_trust_science*100,1), "%")`
+
+of Non-Religious People Have High Trust in Science
+
+:::
+
+
 
 ### Row - Medals By Year {height="80%"}
 
 ```{r}
-#| title: Medals by year
-olympics |>
-  count(year, medal) |>
-  ggplot(aes(x = year, y = n, color = medal)) +
-  geom_point(size = 0.5) +
-  geom_line() +
-  guides(color = guide_legend(reverse = TRUE)) +
-  scale_x_continuous(breaks = seq(1896, 2020, 8)) +
-  labs(
-    x = "Year",
-    y = NULL,
-    color = "Medal"
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "inside",
-    legend.position.inside = c(0.9, 0.2),
-    legend.direction = "horizontal",
-    legend.background = element_rect(fill = "white", color = "gray")
-  )
+
+#wgm2018_full_new2 %>% filter(Education == '1') %>% count(Q12) %>%
+#  mutate(prop = prop.table(n))
+
+
+
+#wgm2018_full_new2 %>% filter(Education == '2') %>% count(Q12) %>%
+#  mutate(prop = prop.table(n))
+
+
+
+#wgm2018_full_new2 %>% filter(Education == '3') %>% count(Q12) %>%
+#  mutate(prop = prop.table(n))
+
+
+#make a faceted bar plot
+
+wgm2018_full_new2 %>% filter(Q12 %in% c(1,2,3,4)) %>%
+  ggplot(aes(x = Education, fill = as.character(Q12))) + 
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = scales::percent)
+
+
+
 ```
+
+
+
+
+
 
