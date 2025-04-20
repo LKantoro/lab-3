@@ -2,7 +2,7 @@
 title: "Lucas Kantorowski"
 format: 
   dashboard:
-    orientation: rows
+    orientation: columns
     theme: vapor
     nav-buttons:
       - icon: github
@@ -26,7 +26,6 @@ library(dplyr)
 library(sf)
 library(plotly)
 library(readxl)
-
 ```
 
 ```{r}
@@ -216,6 +215,38 @@ graph2_df2 = st_sf(graph2_df2)
 
 
 
+```{r}
+#| label: third-improved-visualization
+
+#finding the count of people who think vaccines are effective
+vaccine_effective_counts = wgm2018_full_new2 %>% group_by(country_name, map_region, Q26) %>% 
+  summarise(total_count = n()) %>% rename('total_effective'= total_count) %>% 
+  filter(Q26 == 1)
+
+#vaccine_effective_counts = filter(vaccine_effective_counts, Q26 == 1)
+```
+
+```{r}
+#finding percent of people who think vaccines are effective and safe, respectively
+percent_effective = inner_join(country_counts, vaccine_effective_counts, by = join_by(country_name == country_name))
+
+#joining effective counts with safe counts
+percent_effective_and_safe = full_join(percent_effective, vaccine_safe_counts, by = join_by(country_name == country_name))
+
+#calculating percent of people who think vaccines are safe
+percent_effective_and_safe$perc_safe = percent_effective_and_safe$total_safe/percent_effective_and_safe$total_surveyed * 100
+
+#calculating percent of people who think vaccines are effective
+percent_effective_and_safe$perc_effective = percent_effective_and_safe$total_effective/percent_effective_and_safe$total_surveyed * 100
+
+#rounding to 2 decimal places for cleanliness
+percent_effective_and_safe = percent_effective_and_safe %>% 
+  mutate(perc_safe = round(perc_safe, 2), perc_effective = round(perc_effective, 2))
+
+```
+
+
+
 
 
 
@@ -262,13 +293,93 @@ rounded_mean_city_mileage <- mpg |>
 ```
 
 
-# Page 1
+# Science vs. Vaccines
 
-## Rows - Plots
+## Column - Plots {width="60%"}
 
-### Column - Medals by sport {height="60%"}
 
-### Vaccines {.tabset}
+### Row {height="70%"}
+
+:::{.card title="Test Card"}
+
+```{r}
+#scatterplot of vaccination rates vs science
+
+plot_ly(data = percent_effective_and_safe, x = ~perc_safe, y = ~perc_effective,
+    type = "scatter", mode = "markers", text = ~country_name, color = ~map_region) %>%
+  layout(plot_bgcolor='white',
+    xaxis = list(ticksuffix = "%", range = list(0, 100), title = "Believe Vaccines are Safe"),
+    yaxis = list(ticksuffix="%", range = list(0, 100), title = ""),
+    title = "Belief in Vaccine Effectiveness Versus Belief in Vaccine Safety in Different Countries")
+```
+:::
+
+### Row {height="30%"}
+
+```{r}
+want_to_know_more_science = wgm2018_full_new2 %>% 
+  count(Q8) %>% mutate(prop = prop.table(n)) %>% 
+  filter(Q8 == '1') %>% 
+  select(prop)
+
+
+
+want_to_know_more_disease = wgm2018_full_new2 %>% 
+  count(Q9) %>% mutate(prop = prop.table(n)) %>% 
+  filter(Q9 == '1') %>% 
+  select(prop)
+
+disease_part_of_science = wgm2018_full_new2 %>% 
+  count(Q3) %>% mutate(prop = prop.table(n)) %>% 
+  filter(Q3 == '1') %>% 
+  select(prop)
+
+```
+
+
+```{r}
+#| content: valuebox
+#| title: "Want To Learn More About Science"
+list(
+  icon = "lightbulb-fill",
+  color = "success",
+  value = paste(round(want_to_know_more_science*100,1), "%")
+)
+
+```
+
+
+```{r}
+#| content: valuebox
+#| title: "Want To Learn More About Disease"
+list(
+  icon = "virus",
+  color = "info",
+  value = paste(round(want_to_know_more_disease*100,1), "%")
+)
+
+```
+
+
+```{r}
+#| content: valuebox
+#| title: "Believe Diseases are a Part of Science"
+list(
+  icon = "link",
+  color = "light",
+  value = paste(round(disease_part_of_science*100,1), "%")
+)
+
+```
+
+
+
+## Column - Medals by year {width="40%"}
+
+
+
+### Row - Vaccines {height="50%" .tabset}
+
 
 ```{r}
 graph1_tibble_vaccine %>% ggplot(aes(x = value, fill = map_region, 
@@ -285,7 +396,6 @@ graph1_tibble_vaccine %>% ggplot(aes(x = value, fill = map_region,
         plot.title.position = "plot", axis.text.y = element_blank(), 
         axis.ticks.y = element_blank())
 ```
-
 
 
 
@@ -308,61 +418,62 @@ graph1_tibble_science %>% ggplot(aes(x = science_value, fill = map_region,
 
 
 
+### Row {height="50%" .tabset}
 
+::: {.card title="Top 30 Vaccination"}
 
-### Column - Medals by year{height="40%"}
 
 ```{r}
-#| title: Medals by year
-olympics |>
-  count(year, medal) |>
-  ggplot(aes(x = year, y = n, color = medal)) +
-  geom_point(size = 0.5) +
-  geom_line() +
-  guides(color = guide_legend(reverse = TRUE)) +
-  scale_x_continuous(breaks = seq(1896, 2020, 8)) +
-  labs(
-    x = "Year",
-    y = NULL,
-    color = "Medal"
-  ) +
-  theme_minimal() +
-  theme(
-    legend.position = "inside",
-    legend.position.inside = c(0.9, 0.2),
-    legend.direction = "horizontal",
-    legend.background = element_rect(fill = "white", color = "gray")
+#table of safe vaccination rates
+
+wgm2018_full_new2 %>% 
+  group_by(country_name, Q25) %>% 
+  summarize(total_count = n()) %>% 
+  pivot_wider(names_from = 'Q25', values_from = 'total_count') %>%
+  rename("Strongly_Agree" = '1', "Somewhat_Agree" = '2', 
+         "Neither" = '3', "Somewhat_Disagree" = '4',
+         "Strongly_Disagree" = '5') %>% 
+  arrange(desc(Strongly_Agree)) %>%
+  gt() %>%
+  cols_align(align = "left", columns = country_name) %>%
+  data_color(
+    method = "numeric",
+    palette = "nord::aurora"
   )
 ```
 
+:::
 
-```{r}
-#| content: valuebox
-#| title: "Least efficient"
-#| icon: fuel-pump-fill
-#| color: danger
-list(
-  value = paste(lowest_mileage_cty, "mpg")
-)
-```
+::: {.card title="Bottom 30 Vaccination"}
 
 
 ```{r}
-#| content: valuebox
-#| title: "Most efficient"
-list(
-  icon = "fuel-pump",
-  color = "success",
-  value = paste(highest_mileage_cty, "mpg")
-)
+#table of safe vaccination rates
+
+wgm2018_full_new2 %>% 
+  group_by(country_name, Q25) %>% 
+  summarize(total_count = n()) %>% 
+  pivot_wider(names_from = 'Q25', values_from = 'total_count') %>%
+  rename("Strongly_Agree" = '1', "Somewhat_Agree" = '2', 
+         "Neither" = '3', "Somewhat_Disagree" = '4',
+         "Strongly_Disagree" = '5') %>% 
+  arrange(Strongly_Agree) %>%
+  gt() %>%
+  cols_align(align = "left", columns = country_name) %>%
+  data_color(
+    method = "numeric",
+    palette = "nord::aurora"
+  )
 ```
 
-# Page 2 {orientation="rows" scrolling="false"}
+:::
+
+# Trust in Science {orientation="columns"}
 
 
-## Rows - Plots
+## Column - Plots {width="55%"}
 
-### Column - Medals by sport {height="60%"}
+
 
 ```{r}
 leaflet(graph2_df2) %>% addTiles() %>% 
@@ -376,19 +487,56 @@ leaflet(graph2_df2) %>% addTiles() %>%
   setView(lng = 0, lat = 0, zoom = 1.5) 
 ```
 
-### Column - Medals by year{height="40%"}
+## Column - Medals by year {width="45%"}
+
+### Row - Valueboxes {height="20%"}
 
 ```{r}
-#| content: valuebox
-#| title: "Most efficient"
-list(
-  icon = "fuel-pump",
-  color = "success",
-  value = paste(highest_mileage_cty, "mpg")
-)
+
+#Q11C, trust in scientists
+
+
+wgm2018_full_new2 %>% filter(D1 == '1') %>%
+  count(Q11C) 
+
+wgm2018_full_new2 %>% filter(D1 == '2') %>%
+  count(Q11C)
+
+#%>% mutate(prop = prop.table(n))
+
+
+
+wgm2018_full_new2 %>% 
+  count(Q9) %>% mutate(prop = prop.table(n)) %>% 
+  filter(Q9 == '1') %>% 
+  select(prop)
 ```
 
 
+```{r}
+#| content: valuebox
+#| title: "Want To Learn More About Science"
+list(
+  icon = "lightbulb-fill",
+  color = "success",
+  value = paste(round(want_to_know_more_science*100,1), "%")
+)
+
+```
+
+
+```{r}
+#| content: valuebox
+#| title: "Want To Learn More About Disease"
+list(
+  icon = "virus",
+  color = "info",
+  value = paste(round(want_to_know_more_disease*100,1), "%")
+)
+
+```
+
+### Row - Medals By Year {height="80%"}
 
 ```{r}
 #| title: Medals by year
@@ -413,7 +561,3 @@ olympics |>
   )
 ```
 
-
-## Sidebar {.sidebar}
-
-hgdsfjkgxkghx
