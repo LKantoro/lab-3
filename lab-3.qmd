@@ -432,7 +432,9 @@ wgm2018_full_new2 %>%
 ```{r}
 leaflet(graph2_df2) %>% addTiles() %>% 
   addPolygons(fillColor = ~pal(trust_value), weight = .2,  opacity = 1, 
-              color = 'black', popup = ~country_name, label = ~trust_value, 
+              color = 'black', 
+              popup = ~paste(country_name, ":",trust_value, '%'), 
+              label = ~paste(trust_value, '%'), 
               stroke = FALSE) %>%
   addLegend(pal = pal, values = ~trust_value, position = "bottomleft", 
             title = "", labFormat = labelFormat(suffix = "%")) %>%
@@ -443,7 +445,7 @@ leaflet(graph2_df2) %>% addTiles() %>%
 
 ## Column - Medals by year {width="45%"}
 
-### Row - Valueboxes {height="20%"}
+### Row - Valueboxes {height="30%"}
 
 ```{r}
 
@@ -482,32 +484,23 @@ of Non-Religious People Have High Trust in Science
 
 
 
-### Row - Medals By Year {height="80%"}
+### Row - Medals By Year {height="70%"}
 
 ```{r}
-
-#wgm2018_full_new2 %>% filter(Education == '1') %>% count(Q12) %>%
-#  mutate(prop = prop.table(n))
-
-
-
-#wgm2018_full_new2 %>% filter(Education == '2') %>% count(Q12) %>%
-#  mutate(prop = prop.table(n))
-
-
-
-#wgm2018_full_new2 %>% filter(Education == '3') %>% count(Q12) %>%
-#  mutate(prop = prop.table(n))
-
-
-#make a faceted bar plot
-
-wgm2018_full_new2 %>% filter(Q12 %in% c(1,2,3,4)) %>%
-  ggplot(aes(x = Education, fill = as.character(Q12))) + 
+wgm2018_full_new2 %>% filter(Q12 %in% c(1,2,3,4)) %>% 
+  filter(Education %in% c(1,2,3)) %>%
+  ggplot(aes(x = factor(Education, levels = c('1', '2', '3'), 
+                        labels = c('Primary','Secondary', 'Tertiary')),
+             fill = factor(Q12, levels = c('4', '3', '2', '1'), 
+                           labels = c('None', 'Little', 'Some', 'Strong')))) + 
   geom_bar(position = "fill") +
-  scale_y_continuous(labels = scales::percent)
-
-
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = 'Education Level', y = '', fill = 'Belief in Science', 
+  title = 'Distribution of Science Belief By Education Level') +
+  theme(legend.position = "right", panel.grid = element_blank(),
+        axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
+        plot.title.position = "plot", panel.grid.major = element_blank()) +
+  scale_fill_manual(values = c('red', 'orange', 'yellow', 'green'))
 
 ```
 
