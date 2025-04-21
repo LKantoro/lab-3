@@ -104,7 +104,7 @@ countries_and_regions = wgm2018_full_new2 %>%
 
 # Science vs. Vaccines
 
-## Column - Plots {width="60%"}
+## Column - Plots {width="55%"}
 
 
 ### Row {height="70%"}
@@ -113,33 +113,57 @@ countries_and_regions = wgm2018_full_new2 %>%
 ```{r}
 #| label: plotly_prep_1
 
-#finding the count of people who think vaccines are effective
-vaccine_effective_counts = wgm2018_full_new2 %>% group_by(country_name, map_region, Q26) %>% 
-  summarise(total_count = n()) %>% rename('total_effective'= total_count) %>% 
-  filter(Q26 == 1)
+#finding the count of surveyed people
+country_counts = wgm2018_full_new2 %>% 
+  group_by(country_name) %>% 
+  summarise(total_count = n()) %>%
+  rename('total_surveyed' = total_count)
 
-#vaccine_effective_counts = filter(vaccine_effective_counts, Q26 == 1)
+#finding the count of people who think vaccines are effective
+vaccine_effective_counts = wgm2018_full_new2 %>%
+  filter(Q26 %in% c('1'), map_region != 'Not Assigned') %>%
+  group_by(country_name, map_region) %>% 
+  summarise(total_effective = n())
+  
+
+#finding the count of people who are knowledgeable about science
+know_science_counts = wgm2018_full_new2 %>% 
+  filter(Q1 %in% c('1', '2'), map_region != 'Not Assigned') %>%
+  group_by(country_name, map_region) %>% 
+  summarise(total_science = n()) 
+
 ```
 
 ```{r}
 #| label: plotly_prep_2
 
 
-#finding percent of people who think vaccines are effective and safe, respectively
-percent_effective = inner_join(country_counts, vaccine_effective_counts, by = join_by(country_name == country_name))
+#finding percent of people who think vaccines are effective
+percent_effective = inner_join(country_counts, vaccine_effective_counts, 
+                               by = join_by(country_name == country_name))
+
+percent_effective$percent_eff = 
+  percent_effective$total_effective/percent_effective$total_surveyed
+
+#finding percent of people who are knowledgeable about science
+percent_science = inner_join(country_counts, know_science_counts, 
+                             by = join_by(country_name == country_name))
+
+
+percent_science$prop_sci = 
+  percent_science$total_science/percent_science$total_surveyed
+
 
 #joining effective counts with safe counts
-percent_effective_and_safe = full_join(percent_effective, vaccine_safe_counts, by = join_by(country_name == country_name))
+percent_effective_and_science = left_join(percent_effective, percent_science, 
+                                       by = join_by(country_name == country_name))
 
-#calculating percent of people who think vaccines are safe
-percent_effective_and_safe$perc_safe = percent_effective_and_safe$total_safe/percent_effective_and_safe$total_surveyed * 100
-
-#calculating percent of people who think vaccines are effective
-percent_effective_and_safe$perc_effective = percent_effective_and_safe$total_effective/percent_effective_and_safe$total_surveyed * 100
 
 #rounding to 2 decimal places for cleanliness
-percent_effective_and_safe = percent_effective_and_safe %>% 
-  mutate(perc_safe = round(perc_safe, 2), perc_effective = round(perc_effective, 2))
+percent_effective_and_science = percent_effective_and_science %>% 
+  mutate(percent_eff = round(percent_eff, 2), prop_sci = round(prop_sci, 2))
+
+
 
 ```
 
@@ -151,17 +175,19 @@ percent_effective_and_safe = percent_effective_and_safe %>%
 
 #scatterplot of vaccination rates vs science
 
-plot_ly(data = percent_effective_and_safe, x = ~perc_safe, y = ~perc_effective,
-    type = "scatter", mode = "markers", text = ~country_name, 
-    color = ~map_region) %>%
+plot_ly(data = percent_effective_and_science, 
+        x = ~prop_sci, y = ~percent_eff, 
+        type = "scatter", mode = "markers", text = ~country_name, 
+        color = ~map_region.x) %>%
   layout(plot_bgcolor='white',
-    xaxis = list(ticksuffix = "%", range = list(0, 100), 
-                 title = "Believe Vaccines are Safe"),
-    yaxis = list(ticksuffix="%", range = list(0, 100), 
+    xaxis = list(ticksuffix = "%", range = list(0, 1), 
+                 title = "'Strong' or 'Some' Knowledge of Science"),
+    yaxis = list(ticksuffix="%", range = list(0, 1), 
                  title = ""),
-    title = "Belief in Vaccine Effectiveness Versus Belief in Vaccine Safety in Different Countries") %>% 
-  layout(legend = list(x = 0.65, y = 0.04, bordercolor = 'black',
-                       borderwidth = 2))
+    title = "Belief in Vaccines Being Effective Versus Knowledge of Science") %>% 
+  layout(xaxis = list(tickformat = "%"), yaxis = list(tickformat = "%"),
+         legend = list(x = 0.85, y = 0.04, bordercolor = 'black',
+                       borderwidth = 2, font = list(size = 10)))
 ```
 :::
 
@@ -227,82 +253,20 @@ list(
 
 
 
-## Column - Medals by year {width="40%"}
+## Column - Medals by year {width="45%"}
 
 
 
 ### Row - Vaccines {height="70%" .tabset}
 
 
-```{r}
-#| label: dotplot_prep_1
-
-#finding percentage who think vaccines are safe based on answering '1' to Q25
-
-country_counts = wgm2018_full_new2 %>% group_by(country_name) %>% 
-  summarise(total_count = n()) %>%
-  rename('total_surveyed' = total_count)
-
-vaccine_safe_counts = wgm2018_full_new2 %>% 
-  group_by(country_name, Q25) %>% 
-  summarise(total_count = n()) %>%
-  rename('total_safe' = total_count) %>% 
-  filter(Q25 %in% c('1','2'))
-
-understand_science_counts = wgm2018_full_new2 %>% 
-  group_by(country_name, Q2) %>% 
-  summarise(total_count = n()) %>%
-  rename('total_understand_science' = total_count) %>% 
-  filter(Q2  '1')
-
-```
 
 
-
-
-
-
-```{r}
-#| label: dotplot_prep_2
-
-
-#joining counts
-graph1_tibble_vaccine = left_join(country_counts, vaccine_safe_counts, 
-                          by = join_by(country_name == country_name))
-
-#dividing people who think safe by people surveyed to find percentage
-graph1_tibble_vaccine$value =
-  graph1_tibble_vaccine$total_safe/graph1_tibble_vaccine$total_surveyed
-
-graph1_tibble_vaccine = left_join(graph1_tibble_vaccine, countries_and_regions, 
-                           by = join_by(country_name == country_name)) %>% 
-  filter(map_region != "Not Assigned")
-
-```
-
-
-```{r}
-#| label: dotplot_prep_3
-
-
-
-#joining counts
-graph1_tibble_science = left_join(country_counts, understand_science_counts, 
-                          by = join_by(country_name == country_name))
-
-#dividing people who understand science by people surveyed to find percentage
-graph1_tibble_science$science_value =
-  graph1_tibble_science$total_understand_science/graph1_tibble_science$total_surveyed
-
-graph1_tibble_science = left_join(graph1_tibble_science, countries_and_regions, 
-                           by = join_by(country_name == country_name)) %>% 
-  filter(map_region != "Not Assigned")
-```
 
 ```{r}
 #| label: dotplot_1
 
-graph1_tibble_vaccine %>% ggplot(aes(x = value, fill = map_region, 
+percent_effective %>% ggplot(aes(x = percent_eff, fill = map_region, 
                               color = map_region)) +
   geom_dotplot(binwidth = .01) + 
   facet_grid(rows = vars(map_region), axis.labels = "margins") +
@@ -324,7 +288,7 @@ graph1_tibble_vaccine %>% ggplot(aes(x = value, fill = map_region,
 ```{r}
 #| label: dotplot_2
 
-graph1_tibble_science %>% ggplot(aes(x = science_value, fill = map_region, 
+percent_science %>% ggplot(aes(x = prop_sci, fill = map_region, 
                               color = map_region)) +
   geom_dotplot(binwidth = .01) + 
   facet_grid(rows = vars(map_region), axis.labels = "margins") +
@@ -341,7 +305,7 @@ graph1_tibble_science %>% ggplot(aes(x = science_value, fill = map_region,
 
 
 
-### Row {height="30%" .tabset}
+### Row - Tables {height="30%" .tabset}
 
 ::: {.card title="Top 30 Vaccination"}
 
@@ -367,29 +331,29 @@ wgm2018_full_new2 %>% filter(Q25 %in% c('1','2','3','4','5')) %>%
 
 
 
-%>%
-  gt() %>%
-  cols_align(align = "left", columns = "country_name") %>%
-  data_color(
-    method = "numeric",
-    palette = "nord::aurora"
-  )
+#%>%
+#  gt() %>%
+#  cols_align(align = "left", columns = "country_name") %>%
+#  data_color(
+#    method = "numeric",
+#    palette = "nord::aurora"
+#  )
 
 
 
-olympics |>
-  count(team, medal) |>
-  pivot_wider(names_from = medal, values_from = n, values_fill = 0) |>
-  mutate(Total = Bronze + Gold + Silver) |>
-  relocate(Team = team, Gold, Silver, Bronze, Total) |>
-  arrange(desc(Total), Team) |>
-  slice_head(n = 30) |>
-  gt() |>
-  cols_align(align = "left", column = "Team") |>
-  data_color(
-    method = "numeric",
-    palette = "nord::aurora"
-  )
+#olympics |>
+#  count(team, medal) |>
+#  pivot_wider(names_from = medal, values_from = n, values_fill = 0) |>
+#  mutate(Total = Bronze + Gold + Silver) |>
+#  relocate(Team = team, Gold, Silver, Bronze, Total) |>
+#  arrange(desc(Total), Team) |>
+#  slice_head(n = 30) |>
+#  gt() |>
+#  cols_align(align = "left", column = "Team") |>
+#  data_color(
+#    method = "numeric",
+#    palette = "nord::aurora"
+#  )
 ```
 
 :::
@@ -441,65 +405,64 @@ world_sf <- read_sf(paste0(
   getwd(), "/data/world_shape_file/",
   "TM_WORLD_BORDERS_SIMPL-0.3.shp"
 ))
-
-#joining country geometries and overall data frame together
-graph2_df = right_join(graph1_tibble_science, world_sf, by = join_by(country_name == NAME))
-
 ```
-
 
 ```{r}
 #| label: chloropleth_prep_2
-#getting the count of high trust in scientists by country
-trust_scientists_counts = wgm2018_full_new2 %>% 
-  group_by(country_name, Q11C) %>% summarise(total_count = n()) %>%
-  rename('total_trust' = total_count) %>% filter(Q11C %in% c('1','2'))
 
-trust_scientists_counts = trust_scientists_counts %>% group_by(country_name) %>%
-  summarise(total_count = sum(total_trust))
+
+#finding the count of people who are knowledgeable about science
+trust_scientists_counts = wgm2018_full_new2 %>% 
+  filter(Q11C %in% c('1', '2')) %>%
+  group_by(country_name, map_region) %>% 
+  summarise(total_trust = n()) 
+
+
+
+
+#finding percent of people who are knowledgeable about science
+percent_trust = inner_join(country_counts, trust_scientists_counts, 
+                             by = join_by(country_name == country_name))
+
+
+percent_trust$perc_trust = 
+  round(percent_trust$total_trust/percent_trust$total_surveyed * 100,2)
+
+
+#joining country geometries and overall data frame together
+chloroplethdf = right_join(percent_trust, world_sf, 
+                           by = join_by(country_name == NAME))
+
 ```
+
+
+
 
 ```{r}
 #| label: chloropleth_prep_3
 
 
-#joining with count of people surveyed
-graph2_tibble = left_join(country_counts, trust_scientists_counts, by =
-                            join_by(country_name == country_name))
-
-#calculating percent of people who have high trust in scientists
-graph2_tibble$trust_value = 
-  round(graph2_tibble$total_count/graph2_tibble$total_surveyed * 100, 2)
-
-graph2_df2 = right_join(graph2_df, graph2_tibble, by = join_by(country_name == country_name))
-```
-
-
-```{r}
-#| label: chloropleth_prep_4
-
-
 #creating bins for coloring
 bins = c(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
 
-pal = colorBin("Paired", domain = graph2_df2$trust_value, bins = bins)
+pal = colorBin("Paired", domain = chloroplethdf$perc_trust, bins = bins)
 
 #converting data.frame to sf for graphing using leaflet: https://r-spatial.github.io/sf/reference/sf.html
-graph2_df2 = st_sf(graph2_df2)
+chloroplethdf = st_sf(chloroplethdf)
 ```
 
 ```{r}
 #| label: chloropleth
 
-leaflet(graph2_df2) %>% addTiles() %>% 
-  addPolygons(fillColor = ~pal(trust_value), weight = .2,  opacity = 1, 
+leaflet(chloroplethdf) %>% addTiles() %>% 
+  addPolygons(fillColor = ~pal(perc_trust), weight = .2,  opacity = 1, 
               color = 'black', 
-              popup = ~paste(country_name, ":",trust_value, '%'), 
-              label = ~paste(trust_value, '%'), 
+              popup = ~paste(country_name, ":",perc_trust, '%'), 
+              label = ~paste(country_name, ":",perc_trust, '%'), 
               stroke = FALSE) %>%
-  addLegend(pal = pal, values = ~trust_value, position = "bottomleft", 
+  addLegend(pal = pal, values = ~perc_trust, position = "bottomleft", 
             title = "", labFormat = labelFormat(suffix = "%")) %>%
-  addControl(c("Perecentage of Population Who Have Trust In Scientists"), 
+  addControl(c("Percentage of Population Who Have Trust In Scientists"), 
              position = "topleft") %>%
   setView(lng = 0, lat = 0, zoom = 1.5) 
 ```
