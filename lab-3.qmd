@@ -100,7 +100,7 @@ countries_and_regions = wgm2018_full_new2 %>%
 
 # Science vs. Vaccines
 
-## Column - Plots {width="60%"}
+## Column - Plots {width="50%"}
 
 ### Row {height="75%"}
 
@@ -161,7 +161,8 @@ percent_effective_and_science = percent_effective_and_science %>%
 
 ```
 
-::: {.card title="Test Card"}
+::: {.card title="Belief Vaccines are Effective vs. Understanding of Science"}
+
 ```{r}
 #| label: plotly_graph
 
@@ -176,8 +177,6 @@ plot_ly(data = percent_effective_and_science,
                  title = "'Strong' or 'Some' Knowledge of Science"),
     yaxis = list(range = list(0, 1), tickformat = ".0%",
                  title = ""), 
-    title = 
-      "Belief in Effectiveness Vaccines Versus Claimed Knowledge of Science",
     legend = list(x = 0.85, y = 0.04, bordercolor = 'black',
                        borderwidth = 2, font = list(size = 10))) %>%
   add_trace(showlegend = FALSE, hovertemplate = 'Knowledge of Science: %{x} 
@@ -243,7 +242,7 @@ list(
 
 ```
 
-## Column - Medals by year {width="40%"}
+## Column - Medals by year {width="50%"}
 
 ### Row - Vaccines {.tabset height="75%"}
 
@@ -297,7 +296,8 @@ percent_science %>% ggplot(aes(x = prop_sci, fill = map_region,
 
 ### Row - Tables {.tabset height="25%"}
 
-::: {.card title="Top 30 Vaccination"}
+::: {.card title="Belief In Vaccination Safety Top 30 Highest"}
+
 ```{r}
 #| label: table_1
 
@@ -316,23 +316,25 @@ top30rate = wgm2018_full_new2 %>%
   arrange(desc(Strongly_Agree))
 
 
-top30rate %>%
+top30rate %>% select(!total) %>%
   rename("Country" = "country_name",
          "Strongly Agree" = "Strongly_Agree", 
          "Somewhat Agree" = 'Somewhat_Agree',
          "Somewhat Disagree" = 'Somewhat_Disagree',
          "Strongly Disagree" = 'Strongly_Disagree') %>% 
-  select(!total) %>%
-  gt() %>%
-  cols_align(align = "left", columns = Country) %>%
+  ungroup() %>% 
+  gt() %>% 
+  cols_align(align = "left", columns = Country) %>% 
   data_color(
     method = "numeric",
-    palette = "nord::aurora"
-  )
+    palette = "viridis"
+  ) %>% fmt_percent(c('Strongly Agree', 'Somewhat Agree', 'Neither',
+                      'Somewhat Disagree', 'Strongly Disagree'))
 ```
 :::
 
-::: {.card title="Bottom 30 Vaccination"}
+::: {.card title="Belief In Vaccination Safety Top 30 Lowest"}
+
 ```{r}
 #| label: table_2
 
@@ -349,22 +351,26 @@ bottom30rate = wgm2018_full_new2 %>%
   rename("Strongly_Agree" = '1', "Somewhat_Agree" = '2', 
          "Neither" = '3', "Somewhat_Disagree" = '4',
          "Strongly_Disagree" = '5') %>% 
-  arrange(Strongly_Disagree)
+  arrange(desc(Strongly_Disagree))
 
 
-bottom30rate %>%
+bottom30rate %>% select(!total) %>%
   rename("Country" = "country_name",
          "Strongly Agree" = "Strongly_Agree", 
          "Somewhat Agree" = 'Somewhat_Agree',
          "Somewhat Disagree" = 'Somewhat_Disagree',
          "Strongly Disagree" = 'Strongly_Disagree') %>% 
-  select(!total) %>%
-  gt() %>%
-  cols_align(align = "left", columns = Country) %>%
+  ungroup() %>% 
+  gt() %>% 
+  cols_align(align = "left", columns = Country) %>% 
   data_color(
     method = "numeric",
-    palette = "nord::aurora"
-  )
+    palette = "viridis"
+  ) %>% fmt_percent(c('Strongly Agree', 'Somewhat Agree', 'Neither',
+                      'Somewhat Disagree', 'Strongly Disagree'))
+
+
+
 ```
 :::
 
@@ -434,7 +440,7 @@ chloroplethdf = st_sf(chloroplethdf)
 ```
 
 
-::: {.card title="Percentage of Population Who Have Trust In Scientists"}
+::: {.card title="Percentage of Population Who Trust Scientists"}
 
 
 ```{r}
