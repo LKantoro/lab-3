@@ -40,6 +40,7 @@ wgm2018_dict = read_excel(here::here("data", "wgm2018-dataset-crosstabs-all-coun
 
 
 ```{r}
+#| label: country_label_prep
 #creating string based on list provided
 countriesstringsplit = str_split(wgm2018_dict[1,3], ',')
 
@@ -56,6 +57,9 @@ countriesdf = countriesdf %>%
 
 
 ```{r}
+#| label: region_label_prep
+
+
 #similar process for splitting regions, as was done above for countries
 
 regionsstringsplit = str_split(wgm2018_dict[57,3], ',')
@@ -83,6 +87,8 @@ regionsdf = regionsdf %>% mutate('map_region' = case_when(
 
 
 ```{r}
+#| label: full_data_with_countries_and_regions
+
 wgm2018_full_new1 = left_join(wgm2018_full, countriesdf, 
                               by = join_by(WP5 == country_code))
 
@@ -95,128 +101,17 @@ countries_and_regions = wgm2018_full_new2 %>%
 ```
 
 
-```{r}
-#finding percentage who think vaccines are safe based on answering '1' to Q25
 
-country_counts = wgm2018_full_new2 %>% group_by(country_name) %>% 
-  summarise(total_count = n()) %>%
-  rename('total_surveyed' = total_count)
+# Science vs. Vaccines
 
-vaccine_safe_counts = wgm2018_full_new2 %>% 
-  group_by(country_name, Q25) %>% 
-  summarise(total_count = n()) %>%
-  rename('total_safe' = total_count) %>% 
-  filter(Q25 == '1')
-
-understand_science_counts = wgm2018_full_new2 %>% 
-  group_by(country_name, Q2) %>% 
-  summarise(total_count = n()) %>%
-  rename('total_understand_science' = total_count) %>% 
-  filter(Q2 == '1')
-
-```
+## Column - Plots {width="60%"}
 
 
-
-
+### Row {height="70%"}
 
 
 ```{r}
-#joining counts
-graph1_tibble_vaccine = left_join(country_counts, vaccine_safe_counts, 
-                          by = join_by(country_name == country_name))
-
-#dividing people who think safe by people surveyed to find percentage
-graph1_tibble_vaccine$value =
-  graph1_tibble_vaccine$total_safe/graph1_tibble_vaccine$total_surveyed
-
-graph1_tibble_vaccine = left_join(graph1_tibble_vaccine, countries_and_regions, 
-                           by = join_by(country_name == country_name)) %>% 
-  filter(map_region != "Not Assigned")
-
-```
-
-
-```{r}
-#joining counts
-graph1_tibble_science = left_join(country_counts, understand_science_counts, 
-                          by = join_by(country_name == country_name))
-
-#dividing people who understand science by people surveyed to find percentage
-graph1_tibble_science$science_value =
-  graph1_tibble_science$total_understand_science/graph1_tibble_science$total_surveyed
-
-graph1_tibble_science = left_join(graph1_tibble_science, countries_and_regions, 
-                           by = join_by(country_name == country_name)) %>% 
-  filter(map_region != "Not Assigned")
-```
-
-
-
-
-```{r}
-#| label: second-improved-visualization
-
-#finding country geometries: https://r-graph-gallery.com/183-choropleth-map-with-leaflet.html
-
-download.file(
-  "https://raw.githubusercontent.com/holtzy/R-graph-gallery/master/DATA/world_shape_file.zip",
-  destfile = "data/world_shape_file.zip"
-)
-
-#system("unzip DATA/world_shape_file.zip")
-
-world_sf <- read_sf(paste0(
-  getwd(), "/data/world_shape_file/",
-  "TM_WORLD_BORDERS_SIMPL-0.3.shp"
-))
-```
-
-
-```{r}
-#joining country geometries and overall data frame together
-graph2_df = right_join(graph1_tibble_science, world_sf, by = join_by(country_name == NAME))
-
-```
-
-
-```{r}
-#getting the count of high trust in scientists by country
-trust_scientists_counts = wgm2018_full_new2 %>% 
-  group_by(country_name, Q11C) %>% summarise(total_count = n()) %>%
-  rename('total_trust' = total_count) %>% filter(Q11C %in% c('1','2'))
-
-trust_scientists_counts = trust_scientists_counts %>% group_by(country_name) %>%
-  summarise(total_count = sum(total_trust))
-```
-
-```{r}
-#joining with count of people surveyed
-graph2_tibble = left_join(country_counts, trust_scientists_counts, by =
-                            join_by(country_name == country_name))
-
-#calculating percent of people who have high trust in scientists
-graph2_tibble$trust_value = 
-  round(graph2_tibble$total_count/graph2_tibble$total_surveyed * 100, 2)
-
-graph2_df2 = right_join(graph2_df, graph2_tibble, by = join_by(country_name == country_name))
-```
-
-
-```{r}
-#creating bins for coloring
-bins = c(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
-
-pal = colorBin("Paired", domain = graph2_df2$trust_value, bins = bins)
-
-#converting data.frame to sf for graphing using leaflet: https://r-spatial.github.io/sf/reference/sf.html
-graph2_df2 = st_sf(graph2_df2)
-```
-
-
-
-```{r}
-#| label: third-improved-visualization
+#| label: plotly_prep_1
 
 #finding the count of people who think vaccines are effective
 vaccine_effective_counts = wgm2018_full_new2 %>% group_by(country_name, map_region, Q26) %>% 
@@ -227,6 +122,9 @@ vaccine_effective_counts = wgm2018_full_new2 %>% group_by(country_name, map_regi
 ```
 
 ```{r}
+#| label: plotly_prep_2
+
+
 #finding percent of people who think vaccines are effective and safe, respectively
 percent_effective = inner_join(country_counts, vaccine_effective_counts, by = join_by(country_name == country_name))
 
@@ -246,31 +144,32 @@ percent_effective_and_safe = percent_effective_and_safe %>%
 ```
 
 
-
-# Science vs. Vaccines
-
-## Column - Plots {width="60%"}
-
-
-### Row {height="70%"}
-
 :::{.card title="Test Card"}
 
 ```{r}
+#| label: plotly_graph
+
 #scatterplot of vaccination rates vs science
 
 plot_ly(data = percent_effective_and_safe, x = ~perc_safe, y = ~perc_effective,
-    type = "scatter", mode = "markers", text = ~country_name, color = ~map_region) %>%
+    type = "scatter", mode = "markers", text = ~country_name, 
+    color = ~map_region) %>%
   layout(plot_bgcolor='white',
-    xaxis = list(ticksuffix = "%", range = list(0, 100), title = "Believe Vaccines are Safe"),
-    yaxis = list(ticksuffix="%", range = list(0, 100), title = ""),
-    title = "Belief in Vaccine Effectiveness Versus Belief in Vaccine Safety in Different Countries")
+    xaxis = list(ticksuffix = "%", range = list(0, 100), 
+                 title = "Believe Vaccines are Safe"),
+    yaxis = list(ticksuffix="%", range = list(0, 100), 
+                 title = ""),
+    title = "Belief in Vaccine Effectiveness Versus Belief in Vaccine Safety in Different Countries") %>% 
+  layout(legend = list(x = 0.65, y = 0.04, bordercolor = 'black',
+                       borderwidth = 2))
 ```
 :::
 
 ### Row {height="30%"}
 
 ```{r}
+#| label: valueboxes_prep
+
 want_to_know_more_science = wgm2018_full_new2 %>% 
   count(Q8) %>% mutate(prop = prop.table(n)) %>% 
   filter(Q8 == '1') %>% 
@@ -332,16 +231,84 @@ list(
 
 
 
-### Row - Vaccines {height="50%" .tabset}
+### Row - Vaccines {height="70%" .tabset}
 
 
 ```{r}
+#| label: dotplot_prep_1
+
+#finding percentage who think vaccines are safe based on answering '1' to Q25
+
+country_counts = wgm2018_full_new2 %>% group_by(country_name) %>% 
+  summarise(total_count = n()) %>%
+  rename('total_surveyed' = total_count)
+
+vaccine_safe_counts = wgm2018_full_new2 %>% 
+  group_by(country_name, Q25) %>% 
+  summarise(total_count = n()) %>%
+  rename('total_safe' = total_count) %>% 
+  filter(Q25 %in% c('1','2'))
+
+understand_science_counts = wgm2018_full_new2 %>% 
+  group_by(country_name, Q2) %>% 
+  summarise(total_count = n()) %>%
+  rename('total_understand_science' = total_count) %>% 
+  filter(Q2  '1')
+
+```
+
+
+
+
+
+
+```{r}
+#| label: dotplot_prep_2
+
+
+#joining counts
+graph1_tibble_vaccine = left_join(country_counts, vaccine_safe_counts, 
+                          by = join_by(country_name == country_name))
+
+#dividing people who think safe by people surveyed to find percentage
+graph1_tibble_vaccine$value =
+  graph1_tibble_vaccine$total_safe/graph1_tibble_vaccine$total_surveyed
+
+graph1_tibble_vaccine = left_join(graph1_tibble_vaccine, countries_and_regions, 
+                           by = join_by(country_name == country_name)) %>% 
+  filter(map_region != "Not Assigned")
+
+```
+
+
+```{r}
+#| label: dotplot_prep_3
+
+
+
+#joining counts
+graph1_tibble_science = left_join(country_counts, understand_science_counts, 
+                          by = join_by(country_name == country_name))
+
+#dividing people who understand science by people surveyed to find percentage
+graph1_tibble_science$science_value =
+  graph1_tibble_science$total_understand_science/graph1_tibble_science$total_surveyed
+
+graph1_tibble_science = left_join(graph1_tibble_science, countries_and_regions, 
+                           by = join_by(country_name == country_name)) %>% 
+  filter(map_region != "Not Assigned")
+```
+
+```{r}
+#| label: dotplot_1
+
 graph1_tibble_vaccine %>% ggplot(aes(x = value, fill = map_region, 
                               color = map_region)) +
   geom_dotplot(binwidth = .01) + 
   facet_grid(rows = vars(map_region), axis.labels = "margins") +
   labs(x = "", y = "", fill = "",
-       title = "Strong Belief Vaccines Are Effective By Country and Region") +
+       title = "Belief Vaccines Are Effective By Country and Region",
+       subtitle = "People Who 'Agreed' or 'Strongly Agreed'") +
   scale_x_continuous(labels = scales::percent) + xlim(0, 1) +
   geom_text(aes(x = .5, y = .8, label = map_region)) +
   theme_light() + 
@@ -355,6 +322,8 @@ graph1_tibble_vaccine %>% ggplot(aes(x = value, fill = map_region,
 
 
 ```{r}
+#| label: dotplot_2
+
 graph1_tibble_science %>% ggplot(aes(x = science_value, fill = map_region, 
                               color = map_region)) +
   geom_dotplot(binwidth = .01) + 
@@ -372,24 +341,51 @@ graph1_tibble_science %>% ggplot(aes(x = science_value, fill = map_region,
 
 
 
-### Row {height="50%" .tabset}
+### Row {height="30%" .tabset}
 
 ::: {.card title="Top 30 Vaccination"}
 
 
 ```{r}
+#| label: table_1
+
 #table of safe vaccination rates
 
-wgm2018_full_new2 %>% 
+wgm2018_full_new2 = wgm2018_full_new2 %>% 
+  mutate(Q25factor = factor(Q25, levels = c('1', '2', '3', '4', '5', '99'), 
+                            labels = c("Strongly Agree", "Agree",
+                                       "Neither", "Disagree",
+                                       "Strongly Disagree", "No Answer")))
+
+
+wgm2018_full_new2 %>% filter(Q25 %in% c('1','2','3','4','5')) %>%
   group_by(country_name, Q25) %>% 
   summarize(total_count = n()) %>% 
   pivot_wider(names_from = 'Q25', values_from = 'total_count') %>%
-  rename("Strongly_Agree" = '1', "Somewhat_Agree" = '2', 
-         "Neither" = '3', "Somewhat_Disagree" = '4',
-         "Strongly_Disagree" = '5') %>% 
-  arrange(desc(Strongly_Agree)) %>%
+  slice_head(n = 30) %>%
+  arrange(desc('2'))
+
+
+
+%>%
   gt() %>%
-  cols_align(align = "left", columns = country_name) %>%
+  cols_align(align = "left", columns = "country_name") %>%
+  data_color(
+    method = "numeric",
+    palette = "nord::aurora"
+  )
+
+
+
+olympics |>
+  count(team, medal) |>
+  pivot_wider(names_from = medal, values_from = n, values_fill = 0) |>
+  mutate(Total = Bronze + Gold + Silver) |>
+  relocate(Team = team, Gold, Silver, Bronze, Total) |>
+  arrange(desc(Total), Team) |>
+  slice_head(n = 30) |>
+  gt() |>
+  cols_align(align = "left", column = "Team") |>
   data_color(
     method = "numeric",
     palette = "nord::aurora"
@@ -402,6 +398,8 @@ wgm2018_full_new2 %>%
 
 
 ```{r}
+#| label: table_2
+
 #table of safe vaccination rates
 
 wgm2018_full_new2 %>% 
@@ -427,9 +425,72 @@ wgm2018_full_new2 %>%
 
 ## Column - Plots {width="55%"}
 
+```{r}
+#| label: chloropleth_prep_1
+
+#finding country geometries: https://r-graph-gallery.com/183-choropleth-map-with-leaflet.html
+
+download.file(
+  "https://raw.githubusercontent.com/holtzy/R-graph-gallery/master/DATA/world_shape_file.zip",
+  destfile = "data/world_shape_file.zip"
+)
+
+#system("unzip DATA/world_shape_file.zip")
+
+world_sf <- read_sf(paste0(
+  getwd(), "/data/world_shape_file/",
+  "TM_WORLD_BORDERS_SIMPL-0.3.shp"
+))
+
+#joining country geometries and overall data frame together
+graph2_df = right_join(graph1_tibble_science, world_sf, by = join_by(country_name == NAME))
+
+```
 
 
 ```{r}
+#| label: chloropleth_prep_2
+#getting the count of high trust in scientists by country
+trust_scientists_counts = wgm2018_full_new2 %>% 
+  group_by(country_name, Q11C) %>% summarise(total_count = n()) %>%
+  rename('total_trust' = total_count) %>% filter(Q11C %in% c('1','2'))
+
+trust_scientists_counts = trust_scientists_counts %>% group_by(country_name) %>%
+  summarise(total_count = sum(total_trust))
+```
+
+```{r}
+#| label: chloropleth_prep_3
+
+
+#joining with count of people surveyed
+graph2_tibble = left_join(country_counts, trust_scientists_counts, by =
+                            join_by(country_name == country_name))
+
+#calculating percent of people who have high trust in scientists
+graph2_tibble$trust_value = 
+  round(graph2_tibble$total_count/graph2_tibble$total_surveyed * 100, 2)
+
+graph2_df2 = right_join(graph2_df, graph2_tibble, by = join_by(country_name == country_name))
+```
+
+
+```{r}
+#| label: chloropleth_prep_4
+
+
+#creating bins for coloring
+bins = c(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
+
+pal = colorBin("Paired", domain = graph2_df2$trust_value, bins = bins)
+
+#converting data.frame to sf for graphing using leaflet: https://r-spatial.github.io/sf/reference/sf.html
+graph2_df2 = st_sf(graph2_df2)
+```
+
+```{r}
+#| label: chloropleth
+
 leaflet(graph2_df2) %>% addTiles() %>% 
   addPolygons(fillColor = ~pal(trust_value), weight = .2,  opacity = 1, 
               color = 'black', 
@@ -448,6 +509,7 @@ leaflet(graph2_df2) %>% addTiles() %>%
 ### Row - Valueboxes {height="30%"}
 
 ```{r}
+#| label: valuebox_prep
 
 #Q11C, trust in scientists
 
@@ -487,6 +549,8 @@ of Non-Religious People Have High Trust in Science
 ### Row - Medals By Year {height="70%"}
 
 ```{r}
+#| label: barplot
+
 wgm2018_full_new2 %>% filter(Q12 %in% c(1,2,3,4)) %>% 
   filter(Education %in% c(1,2,3)) %>%
   ggplot(aes(x = factor(Education, levels = c('1', '2', '3'), 
