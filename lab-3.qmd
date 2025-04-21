@@ -27,6 +27,9 @@ library(sf)
 library(scales)
 library(plotly)
 library(readxl)
+library(bslib)
+library(bsicons)
+library(shiny)
 ```
 
 ```{r}
@@ -87,6 +90,7 @@ regionsdf = regionsdf %>% mutate('map_region' = case_when(
 ```{r}
 #| label: full_data_with_countries_and_regions
 
+#merging to create full dataset to use in visuals
 wgm2018_full_new1 = left_join(wgm2018_full, countriesdf, 
                               by = join_by(WP5 == country_code))
 
@@ -143,7 +147,7 @@ percent_effective$percent_eff =
 percent_science = inner_join(country_counts, know_science_counts, 
                              by = join_by(country_name == country_name))
 
-
+#finding proportion of people who are knowledgeable about science
 percent_science$prop_sci = 
   percent_science$total_science/percent_science$total_surveyed
 
@@ -196,7 +200,6 @@ want_to_know_more_science = wgm2018_full_new2 %>%
   select(prop)
 
 
-
 want_to_know_more_disease = wgm2018_full_new2 %>% 
   count(Q9) %>% mutate(prop = prop.table(n)) %>% 
   filter(Q9 == '1') %>% 
@@ -209,36 +212,35 @@ disease_part_of_science = wgm2018_full_new2 %>%
 
 ```
 
-```{r}
-#| content: valuebox
-#| title: "Want To Learn More About Science"
-list(
-  icon = "lightbulb-fill",
-  color = "success",
-  value = paste(round(want_to_know_more_science*100,1), "%")
-)
 
+
+```{r}
+value_box(
+  title = "Want To Learn More About Science",
+  value = paste(round(want_to_know_more_science*100,1), "%"),
+  theme_color = "success",
+  showcase_layout = showcase_top_right(max_height = "100px")
+)  
+```
+
+
+
+```{r}
+value_box(
+  title = "Want To Learn More About Disease",
+  value = paste(round(want_to_know_more_disease*100,1), "%"),
+  theme_color = "info",
+  showcase_layout = showcase_top_right(max_height = "100px")
+)  
 ```
 
 ```{r}
-#| content: valuebox
-#| title: "Want To Learn More About Disease"
-list(
-  icon = "virus",
-  color = "info",
-  value = paste(round(want_to_know_more_disease*100,1), "%")
-)
-
-```
-
-```{r}
-#| content: valuebox
-#| title: "Believe Diseases are a Part of Science"
-list(
-  icon = "link",
-  color = "light",
-  value = paste(round(disease_part_of_science*100,1), "%")
-)
+value_box(
+  title = "Believe Diseases are a Part of Science",
+  value = paste(round(disease_part_of_science*100,1), "%"),
+  theme_color = "light",
+  showcase_layout = showcase_top_right(max_height = "100px")
+)  
 
 ```
 
@@ -271,8 +273,6 @@ percent_effective %>% ggplot(aes(x = percent_eff, fill = map_region,
 
 ::: {.card title="Knowledge of Science"}
 
-
-
 ```{r}
 #| label: dotplot_2
 
@@ -296,12 +296,12 @@ percent_science %>% ggplot(aes(x = prop_sci, fill = map_region,
 
 ### Row - Tables {.tabset height="25%"}
 
-::: {.card title="Belief In Vaccination Safety Top 30 Highest"}
+::: {.card title="Vaccine Safety Beliefs Top 30"}
 
 ```{r}
 #| label: table_1
 
-#table of safe vaccination rates
+#table of safe vaccination rates (in percents)
 
 top30rate = wgm2018_full_new2 %>% 
   group_by(country_name, Q25) %>% 
@@ -313,7 +313,7 @@ top30rate = wgm2018_full_new2 %>%
   rename("Strongly_Agree" = '1', "Somewhat_Agree" = '2', 
          "Neither" = '3', "Somewhat_Disagree" = '4',
          "Strongly_Disagree" = '5') %>% 
-  arrange(desc(Strongly_Agree))
+  arrange(desc(Strongly_Agree)) 
 
 
 top30rate %>% select(!total) %>%
@@ -322,7 +322,8 @@ top30rate %>% select(!total) %>%
          "Somewhat Agree" = 'Somewhat_Agree',
          "Somewhat Disagree" = 'Somewhat_Disagree',
          "Strongly Disagree" = 'Strongly_Disagree') %>% 
-  ungroup() %>% 
+  ungroup() %>%
+  slice_head(n = 30) %>%
   gt() %>% 
   cols_align(align = "left", columns = Country) %>% 
   data_color(
@@ -333,12 +334,12 @@ top30rate %>% select(!total) %>%
 ```
 :::
 
-::: {.card title="Belief In Vaccination Safety Top 30 Lowest"}
+::: {.card title="Vaccine Safety Beliefs Bottom 30"}
 
 ```{r}
 #| label: table_2
 
-#table of safe vaccination rates
+#table of safe vaccination rates (in percents)
 
   
 bottom30rate = wgm2018_full_new2 %>% 
@@ -361,6 +362,7 @@ bottom30rate %>% select(!total) %>%
          "Somewhat Disagree" = 'Somewhat_Disagree',
          "Strongly Disagree" = 'Strongly_Disagree') %>% 
   ungroup() %>% 
+  slice_head(n = 30) %>%
   gt() %>% 
   cols_align(align = "left", columns = Country) %>% 
   data_color(
@@ -368,8 +370,6 @@ bottom30rate %>% select(!total) %>%
     palette = "viridis"
   ) %>% fmt_percent(c('Strongly Agree', 'Somewhat Agree', 'Neither',
                       'Somewhat Disagree', 'Strongly Disagree'))
-
-
 
 ```
 :::
@@ -407,8 +407,6 @@ trust_scientists_counts = wgm2018_full_new2 %>%
   filter(Q11C %in% c('1', '2')) %>%
   group_by(country_name, map_region) %>% 
   summarise(total_trust = n()) 
-
-
 
 
 #finding percent of people who are knowledgeable about science
@@ -501,6 +499,7 @@ of Non-Religious People Have High Trust in Science
 
 ```{r}
 #| label: barplot
+#barplot in distribution of belief about science by educatiomn level
 
 wgm2018_full_new2 %>% filter(Q12 %in% c(1,2,3,4)) %>% 
   filter(Education %in% c(1,2,3)) %>%
