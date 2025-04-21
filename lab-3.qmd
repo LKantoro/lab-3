@@ -24,6 +24,7 @@ library(dplyr)
 library(leaflet)
 library(dplyr)
 library(sf)
+library(scales)
 library(plotly)
 library(readxl)
 ```
@@ -37,7 +38,6 @@ wgm2018_full = read_excel(here::here("data", "wgm2018-dataset-crosstabs-all-coun
 
 wgm2018_dict = read_excel(here::here("data", "wgm2018-dataset-crosstabs-all-countries.xlsx"), sheet = 3)
 ```
-
 
 ```{r}
 #| label: country_label_prep
@@ -54,7 +54,6 @@ countriesdf = countriesdf %>%
                        names = c("country_code", "country_name")) %>% 
   mutate(country_code = as.numeric(country_code))
 ```
-
 
 ```{r}
 #| label: region_label_prep
@@ -85,7 +84,6 @@ regionsdf = regionsdf %>% mutate('map_region' = case_when(
           region_code == 0 ~ 'Not Assigned'))
 ```
 
-
 ```{r}
 #| label: full_data_with_countries_and_regions
 
@@ -100,15 +98,11 @@ countries_and_regions = wgm2018_full_new2 %>%
 
 ```
 
-
-
 # Science vs. Vaccines
 
-## Column - Plots {width="55%"}
+## Column - Plots {width="60%"}
 
-
-### Row {height="70%"}
-
+### Row {height="75%"}
 
 ```{r}
 #| label: plotly_prep_1
@@ -156,7 +150,7 @@ percent_science$prop_sci =
 
 #joining effective counts with safe counts
 percent_effective_and_science = left_join(percent_effective, percent_science, 
-                                       by = join_by(country_name == country_name))
+                                       by = join_by(country_name==country_name))
 
 
 #rounding to 2 decimal places for cleanliness
@@ -167,9 +161,7 @@ percent_effective_and_science = percent_effective_and_science %>%
 
 ```
 
-
-:::{.card title="Test Card"}
-
+::: {.card title="Test Card"}
 ```{r}
 #| label: plotly_graph
 
@@ -180,18 +172,21 @@ plot_ly(data = percent_effective_and_science,
         type = "scatter", mode = "markers", text = ~country_name, 
         color = ~map_region.x) %>%
   layout(plot_bgcolor='white',
-    xaxis = list(ticksuffix = "%", range = list(0, 1), 
+    xaxis = list(range = list(0, 1), tickformat = ".0%", 
                  title = "'Strong' or 'Some' Knowledge of Science"),
-    yaxis = list(ticksuffix="%", range = list(0, 1), 
-                 title = ""),
-    title = "Belief in Vaccines Being Effective Versus Knowledge of Science") %>% 
-  layout(xaxis = list(tickformat = "%"), yaxis = list(tickformat = "%"),
-         legend = list(x = 0.85, y = 0.04, bordercolor = 'black',
-                       borderwidth = 2, font = list(size = 10)))
+    yaxis = list(range = list(0, 1), tickformat = ".0%",
+                 title = ""), 
+    title = 
+      "Belief in Effectiveness Vaccines Versus Claimed Knowledge of Science",
+    legend = list(x = 0.85, y = 0.04, bordercolor = 'black',
+                       borderwidth = 2, font = list(size = 10))) %>%
+  add_trace(showlegend = FALSE, hovertemplate = 'Knowledge of Science: %{x} 
+Vaccine Effectiveness: %{y}
+%{text}')
 ```
 :::
 
-### Row {height="30%"}
+### Row {height="25%"}
 
 ```{r}
 #| label: valueboxes_prep
@@ -215,7 +210,6 @@ disease_part_of_science = wgm2018_full_new2 %>%
 
 ```
 
-
 ```{r}
 #| content: valuebox
 #| title: "Want To Learn More About Science"
@@ -226,7 +220,6 @@ list(
 )
 
 ```
-
 
 ```{r}
 #| content: valuebox
@@ -239,7 +232,6 @@ list(
 
 ```
 
-
 ```{r}
 #| content: valuebox
 #| title: "Believe Diseases are a Part of Science"
@@ -251,17 +243,11 @@ list(
 
 ```
 
+## Column - Medals by year {width="40%"}
 
+### Row - Vaccines {.tabset height="75%"}
 
-## Column - Medals by year {width="45%"}
-
-
-
-### Row - Vaccines {height="70%" .tabset}
-
-
-
-
+::: {.card title="Belief in Vaccine Effectiveness"}
 
 ```{r}
 #| label: dotplot_1
@@ -271,17 +257,20 @@ percent_effective %>% ggplot(aes(x = percent_eff, fill = map_region,
   geom_dotplot(binwidth = .01) + 
   facet_grid(rows = vars(map_region), axis.labels = "margins") +
   labs(x = "", y = "", fill = "",
-       title = "Belief Vaccines Are Effective By Country and Region",
-       subtitle = "People Who 'Agreed' or 'Strongly Agreed'") +
-  scale_x_continuous(labels = scales::percent) + xlim(0, 1) +
+       title = 
+         "People Who 'Agreed' or 'Strongly Agreed' Vaccines Are Effective") +
   geom_text(aes(x = .5, y = .8, label = map_region)) +
   theme_light() + 
   theme(strip.text = element_blank(), legend.position = "none", 
-        panel.grid.minor = element_blank(), panel.grid.major.y =element_blank(),
+        panel.grid.minor = element_blank(), panel.grid.major =element_blank(),
         plot.title.position = "plot", axis.text.y = element_blank(), 
-        axis.ticks.y = element_blank())
+        axis.ticks.y = element_blank()) +
+  scale_x_continuous(labels = scales::percent, limits = c(0,1))
 ```
 
+:::
+
+::: {.card title="Knowledge of Science"}
 
 
 
@@ -293,101 +282,97 @@ percent_science %>% ggplot(aes(x = prop_sci, fill = map_region,
   geom_dotplot(binwidth = .01) + 
   facet_grid(rows = vars(map_region), axis.labels = "margins") +
   labs(x = "", y = "", fill = "",
-       title = "Strong Understanding of Science") +
-  scale_x_continuous(labels = scales::percent) + xlim(0, 1) +
+       title = "People Who Claim 'A lot' or 'Some' Understanding of Science") +
   geom_text(aes(x = .5, y = .8, label = map_region)) +
   theme_light() + 
   theme(strip.text = element_blank(), legend.position = "none", 
-        panel.grid.minor = element_blank(), panel.grid.major.y =element_blank(),
+        panel.grid.minor = element_blank(), panel.grid.major = element_blank(),
         plot.title.position = "plot", axis.text.y = element_blank(), 
-        axis.ticks.y = element_blank())
+        axis.ticks.y = element_blank()) +
+  scale_x_continuous(labels = scales::percent, limits = c(0,1))
 ```
 
+:::
 
 
-### Row - Tables {height="30%" .tabset}
+### Row - Tables {.tabset height="25%"}
 
 ::: {.card title="Top 30 Vaccination"}
-
-
 ```{r}
 #| label: table_1
 
 #table of safe vaccination rates
 
-wgm2018_full_new2 = wgm2018_full_new2 %>% 
-  mutate(Q25factor = factor(Q25, levels = c('1', '2', '3', '4', '5', '99'), 
-                            labels = c("Strongly Agree", "Agree",
-                                       "Neither", "Disagree",
-                                       "Strongly Disagree", "No Answer")))
-
-
-wgm2018_full_new2 %>% filter(Q25 %in% c('1','2','3','4','5')) %>%
+top30rate = wgm2018_full_new2 %>% 
   group_by(country_name, Q25) %>% 
-  summarize(total_count = n()) %>% 
+  summarize(total_count = n()) %>%
   pivot_wider(names_from = 'Q25', values_from = 'total_count') %>%
-  slice_head(n = 30) %>%
-  arrange(desc('2'))
-
-
-
-#%>%
-#  gt() %>%
-#  cols_align(align = "left", columns = "country_name") %>%
-#  data_color(
-#    method = "numeric",
-#    palette = "nord::aurora"
-#  )
-
-
-
-#olympics |>
-#  count(team, medal) |>
-#  pivot_wider(names_from = medal, values_from = n, values_fill = 0) |>
-#  mutate(Total = Bronze + Gold + Silver) |>
-#  relocate(Team = team, Gold, Silver, Bronze, Total) |>
-#  arrange(desc(Total), Team) |>
-#  slice_head(n = 30) |>
-#  gt() |>
-#  cols_align(align = "left", column = "Team") |>
-#  data_color(
-#    method = "numeric",
-#    palette = "nord::aurora"
-#  )
-```
-
-:::
-
-::: {.card title="Bottom 30 Vaccination"}
-
-
-```{r}
-#| label: table_2
-
-#table of safe vaccination rates
-
-wgm2018_full_new2 %>% 
-  group_by(country_name, Q25) %>% 
-  summarize(total_count = n()) %>% 
-  pivot_wider(names_from = 'Q25', values_from = 'total_count') %>%
+  select(country_name, '1', '2', '3', '4', '5') %>%
+  mutate(total = sum(c_across(1:5))) %>% 
+  mutate(across(1:5, ~ . / total)) %>%
   rename("Strongly_Agree" = '1', "Somewhat_Agree" = '2', 
          "Neither" = '3', "Somewhat_Disagree" = '4',
          "Strongly_Disagree" = '5') %>% 
-  arrange(Strongly_Agree) %>%
+  arrange(desc(Strongly_Agree))
+
+
+top30rate %>%
+  rename("Country" = "country_name",
+         "Strongly Agree" = "Strongly_Agree", 
+         "Somewhat Agree" = 'Somewhat_Agree',
+         "Somewhat Disagree" = 'Somewhat_Disagree',
+         "Strongly Disagree" = 'Strongly_Disagree') %>% 
+  select(!total) %>%
   gt() %>%
-  cols_align(align = "left", columns = country_name) %>%
+  cols_align(align = "left", columns = Country) %>%
   data_color(
     method = "numeric",
     palette = "nord::aurora"
   )
 ```
+:::
 
+::: {.card title="Bottom 30 Vaccination"}
+```{r}
+#| label: table_2
+
+#table of safe vaccination rates
+
+  
+bottom30rate = wgm2018_full_new2 %>% 
+  group_by(country_name, Q25) %>% 
+  summarize(total_count = n()) %>%
+  pivot_wider(names_from = 'Q25', values_from = 'total_count') %>%
+  select(country_name, '1', '2', '3', '4', '5') %>%
+  mutate(total = sum(c_across(1:5))) %>% 
+  mutate(across(1:5, ~ . / total)) %>%
+  rename("Strongly_Agree" = '1', "Somewhat_Agree" = '2', 
+         "Neither" = '3', "Somewhat_Disagree" = '4',
+         "Strongly_Disagree" = '5') %>% 
+  arrange(Strongly_Disagree)
+
+
+bottom30rate %>%
+  rename("Country" = "country_name",
+         "Strongly Agree" = "Strongly_Agree", 
+         "Somewhat Agree" = 'Somewhat_Agree',
+         "Somewhat Disagree" = 'Somewhat_Disagree',
+         "Strongly Disagree" = 'Strongly_Disagree') %>% 
+  select(!total) %>%
+  gt() %>%
+  cols_align(align = "left", columns = Country) %>%
+  data_color(
+    method = "numeric",
+    palette = "nord::aurora"
+  )
+```
 :::
 
 # Trust in Science {orientation="columns"}
 
-
 ## Column - Plots {width="55%"}
+
+
 
 ```{r}
 #| label: chloropleth_prep_1
@@ -435,9 +420,6 @@ chloroplethdf = right_join(percent_trust, world_sf,
 
 ```
 
-
-
-
 ```{r}
 #| label: chloropleth_prep_3
 
@@ -451,6 +433,10 @@ pal = colorBin("Paired", domain = chloroplethdf$perc_trust, bins = bins)
 chloroplethdf = st_sf(chloroplethdf)
 ```
 
+
+::: {.card title="Percentage of Population Who Have Trust In Scientists"}
+
+
 ```{r}
 #| label: chloropleth
 
@@ -462,10 +448,11 @@ leaflet(chloroplethdf) %>% addTiles() %>%
               stroke = FALSE) %>%
   addLegend(pal = pal, values = ~perc_trust, position = "bottomleft", 
             title = "", labFormat = labelFormat(suffix = "%")) %>%
-  addControl(c("Percentage of Population Who Have Trust In Scientists"), 
-             position = "topleft") %>%
-  setView(lng = 0, lat = 0, zoom = 1.5) 
+  setView(lng = 0, lat = 0, zoom = 2) 
 ```
+
+
+:::
 
 ## Column - Medals by year {width="45%"}
 
@@ -489,27 +476,22 @@ non_religious_trust_science = wgm2018_full_new2 %>% filter(D1 == '2') %>%
 
 ```
 
-
 ::: {.valuebox icon="yin-yang" color="#FF0000"}
-
 `{r} paste(round(religious_trust_science*100,1), "%")`
 
 of Religious People Have High Trust in Science
-
 :::
 
-
 ::: {.valuebox icon="slash-circle" color="#000000"}
-
 `{r} paste(round(non_religious_trust_science*100,1), "%")`
 
 of Non-Religious People Have High Trust in Science
-
 :::
 
-
-
 ### Row - Medals By Year {height="70%"}
+
+::: {.card title="Science Belief By Education Level"}
+
 
 ```{r}
 #| label: barplot
@@ -522,17 +504,15 @@ wgm2018_full_new2 %>% filter(Q12 %in% c(1,2,3,4)) %>%
                            labels = c('None', 'Little', 'Some', 'Strong')))) + 
   geom_bar(position = "fill") +
   scale_y_continuous(labels = scales::percent) +
-  labs(x = 'Education Level', y = '', fill = 'Belief in Science', 
-  title = 'Distribution of Science Belief By Education Level') +
+  labs(x = 'Education Level', y = '', fill = 'Belief Level') +
   theme(legend.position = "right", panel.grid = element_blank(),
         axis.ticks.x = element_blank(), axis.ticks.y = element_blank(),
         plot.title.position = "plot", panel.grid.major = element_blank()) +
-  scale_fill_manual(values = c('red', 'orange', 'yellow', 'green'))
+  scale_fill_manual(values = c('red', 'orange', 'yellow', 'green')) +
+  theme_minimal() +
+  theme(panel.grid.minor = element_blank(), panel.grid.major.x =element_blank(),
+        panel.grid.major.y =element_blank(), axis.ticks.x = element_blank())
 
 ```
 
-
-
-
-
-
+:::
